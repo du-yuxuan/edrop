@@ -9,7 +9,7 @@ window.iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 Events.on('display-name', e => {
     const me = e.detail.message;
     const $displayName = $('displayName')
-    $displayName.textContent = 'You are known as ' + me.displayName;
+    $displayName.textContent = '你正在使用的设备是' + me.deviceName;
     $displayName.title = me.deviceName;
 });
 
@@ -420,7 +420,7 @@ class Notifications {
         });
     }
 
-    _notify(message, body) {
+    _notify(message, body, closeTimeout = 20000) {
         const config = {
             body: body,
             icon: '/images/logo_transparent_128x128.png',
@@ -435,35 +435,27 @@ class Notifications {
         }
 
         // Notification is persistent on Android. We have to close it manually
-        const visibilitychangeHandler = () => {                             
-            if (document.visibilityState === 'visible') {    
-                notification.close();
-                Events.off('visibilitychange', visibilitychangeHandler);
-            }                                                       
-        };                                                                                
-        Events.on('visibilitychange', visibilitychangeHandler);
+        if (closeTimeout) {
+            setTimeout(_ => notification.close(), closeTimeout);
+        }
 
         return notification;
     }
 
     _messageNotification(message) {
-        if (document.visibilityState !== 'visible') {
-            if (isURL(message)) {
-                const notification = this._notify(message, 'Click to open link');
-                this._bind(notification, e => window.open(message, '_blank', null, true));
-            } else {
-                const notification = this._notify(message, 'Click to copy text');
-                this._bind(notification, e => this._copyText(message, notification));
-            }
+        if (isURL(message)) {
+            const notification = this._notify(message, 'Click to open link');
+            this._bind(notification, e => window.open(message, '_blank', null, true));
+        } else {
+            const notification = this._notify(message, 'Click to copy text');
+            this._bind(notification, e => this._copyText(message, notification));
         }
     }
 
     _downloadNotification(message) {
-        if (document.visibilityState !== 'visible') {
-            const notification = this._notify(message, 'Click to download');
-            if (!window.isDownloadSupported) return;
-            this._bind(notification, e => this._download(notification));
-        }
+        const notification = this._notify(message, 'Click to download');
+        if (!window.isDownloadSupported) return;
+        this._bind(notification, e => this._download(notification));
     }
 
     _download(notification) {
